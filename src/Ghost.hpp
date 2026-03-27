@@ -4,8 +4,7 @@
 struct Ghost : public Entity {
     Ghost(float x, float y, float width, float height, sf::Texture& tx)
     : Entity(x, y, width, height, tx)
-    {
-    }
+    {}
 
     bool isAligned(int tileSize) const {
         float rx = fmodf(x, tileSize);
