@@ -5,6 +5,7 @@ struct Entity : public Block {
     float velocityX = 0;
     float velocityY = 0;
     char direction = 'U';
+    char desiredDirection = 0;
     float startX;
     float startY;
 

@@ -5,7 +5,7 @@ int main() {
     Game game;
     sf::VideoMode videoMode(game.width, game.height);
     sf::RenderWindow window(videoMode, game.appName);
-    window.setFramerateLimit(30);
+    window.setFramerateLimit(24);
 
     while (window.isOpen()) {
         Event event;
@@ -13,7 +13,7 @@ int main() {
         // イベント設定
         while (window.pollEvent(event)) {
             event.setClosed(window);
-            event.setKeyPressed(game);
+            event.setKeyEvent(game);
         }
 
         // 更新

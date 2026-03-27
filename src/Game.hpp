@@ -33,7 +33,6 @@ public:
     void loadMap();
     void update();
     void draw(sf::RenderWindow& window);
-    void handleInput(char dir);
     void makeWall(float x, float y, float scaleWidth, float scaleHeight);
     void makeFood(float x, float y);
     void makeGhost(float x, float y, float scaleWidth, float scaleHeight, sf::Texture& tx);

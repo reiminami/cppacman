@@ -1,5 +1,6 @@
 #pragma once
 #include <SFML/Graphics.hpp>
+#include <iostream>
 
 class HUD {
 public:
@@ -30,7 +31,8 @@ public:
         sf::Vector2u winSize = window.getSize();
         text.setString(std::to_string(score));
         sf::FloatRect bounds = text.getLocalBounds();
-        text.setPosition(winSize.x - bounds.width - 20, 10);
+        text.setOrigin(bounds.left + bounds.width, bounds.top);
+        text.setPosition(winSize.x - 20, 20);
         window.draw(text);
     }
 

@@ -1,5 +1,6 @@
 #pragma once
 #include <SFML/Graphics.hpp>
+#include <cmath>
 #include "Game.hpp"
 
 class Block {
@@ -27,8 +28,22 @@ public:
 
     // 衝突判定を行います
     bool collision(const Block& other) {
-        return this->x < other.x + other.width  && this->x + this->width > other.x &&
-               this->y < other.y + other.height && this->y + this->height > other.y;
+        float thisX = std::floor(this->x);
+        float thisY = std::floor(this->y);
+        float otherX = std::floor(other.x);
+        float otherY = std::floor(other.y);
+        return thisX < otherX + other.width  && thisX + this->width > otherX &&
+               thisY < otherY + other.height && thisY + this->height > otherY;
+    }
+
+    // 指定位置での衝突判定を行います
+    bool collision(const Block& other, float testX, float testY) const {
+        float thisX = std::floor(testX);
+        float thisY = std::floor(testY);
+        float otherX = std::floor(other.x);
+        float otherY = std::floor(other.y);
+        return thisX < otherX + other.width  && thisX + this->width > otherX &&
+               thisY < otherY + other.height && thisY + this->height > otherY;
     }
 
     // scale用のサイズを返します

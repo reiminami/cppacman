@@ -49,15 +49,46 @@ void Game::loadMap() {
 
 // 更新
 void Game::update() {
-    player.x += player.velocityX;
-    player.y += player.velocityY;
+    // 方向変更を試みる
+    if (player.desiredDirection != 0 && player.desiredDirection != player.direction) {
+        player.setDirection(player.desiredDirection, tileSize / 4.0f);
+        float nextX = player.x + player.velocityX;
+        float nextY = player.y + player.velocityY;
+        bool canChange = true;
+        for (auto& wall : walls) {
+            if (player.collision(wall, nextX, nextY)) {
+                canChange = false;
+                break;
+            }
+        }
+        if (canChange) {
+            player.direction = player.desiredDirection;
+            switch (player.direction) {
+                case 'U': player.sprite.setTexture(playerUpTx); break;
+                case 'D': player.sprite.setTexture(playerDownTx); break;
+                case 'L': player.sprite.setTexture(playerLeftTx); break;
+                case 'R': player.sprite.setTexture(playerRightTx); break;
+            }
+        } else {
+            player.setDirection(player.direction, tileSize / 4.0f);
+        }
+    }
 
+    // 現在の方向で移動
+    float nextX = player.x + player.velocityX;
+    float nextY = player.y + player.velocityY;
+    bool canMove = true;
     for (auto& wall : walls) {
-        if (player.collision(wall)) {
-            player.x -= player.velocityX;
-            player.y -= player.velocityY;
+        if (player.collision(wall, nextX, nextY)) {
+            canMove = false;
             break;
         }
+    }
+    if (canMove) {
+        player.x = nextX;
+        player.y = nextY;
+    } else {
+        player.resetVelocity();
     }
 
     for (int i=0; i<foods.size(); i++) {
@@ -69,6 +100,9 @@ void Game::update() {
     }
 
     for (auto& ghost : ghosts) {
+        // 交差点などでランダムに方向転換を試みる
+        ghost.ai(tileSize, walls);
+
         ghost.x += ghost.velocityX;
         ghost.y += ghost.velocityY;
 
@@ -77,7 +111,7 @@ void Game::update() {
                 ghost.x -= ghost.velocityX;
                 ghost.y -= ghost.velocityY;
                 ghost.resetVelocity();
-                ghost.ai(tileSize);
+                ghost.ai(tileSize, walls);
             }
         }
 
@@ -111,17 +145,6 @@ void Game::draw(sf::RenderWindow& window) {
     hud.drawGameOver(window, gameOver);
 }
 
-// プレイヤーからの入力でテクスチャを変化させます
-void Game::handleInput(char dir) {
-    player.setDirection(dir, tileSize / 4);
-    switch (dir) {
-        case 'U': player.sprite.setTexture(playerUpTx);    break;
-        case 'D': player.sprite.setTexture(playerDownTx);  break;
-        case 'L': player.sprite.setTexture(playerLeftTx);  break;
-        case 'R': player.sprite.setTexture(playerRightTx); break;
-    }
-}
-
 void Game::makeWall(float x, float y, float scaleWidth, float scaleHeight) {
     Block wall(x, y, scaleWidth, scaleHeight, wallTx);
     walls.push_back(wall);
@@ -134,6 +157,6 @@ void Game::makeFood(float x, float y) {
 
 void Game::makeGhost(float x, float y, float scaleWidth, float scaleHeight, sf::Texture& tx) {
     Ghost ghost(x, y, scaleWidth, scaleHeight, tx);
-    ghost.ai(tileSize);
+    ghost.ai(tileSize, walls);
     ghosts.push_back(ghost);
 }
