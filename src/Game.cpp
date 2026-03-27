@@ -1,85 +1,73 @@
+#include <SFML/Graphics.hpp>
 #include "Game.hpp"
 #include "Map.hpp"
+#include "HUD.hpp"
 
-Game::Game(): pacman(0, 0, 0, 0, pacmanRight) {
-    wallTexture.loadFromFile("images/wall.png");
-    redGhost.loadFromFile("images/redGhost.png");
-    blueGhost.loadFromFile("images/blueGhost.png");
-    pinkGhost.loadFromFile("images/pinkGhost.png");
-    orangeGhost.loadFromFile("images/orangeGhost.png");
-    pacmanUp.loadFromFile("images/pacmanUp.png");
-    pacmanDown.loadFromFile("images/pacmanDown.png");
-    pacmanLeft.loadFromFile("images/pacmanLeft.png");
-    pacmanRight.loadFromFile("images/pacmanRight.png");
-
-    hud.reset();
-    hud.pacmanTexture = &pacmanRight;
-
+Game::Game(): player(0, 0, 1, 1, playerRightTx)
+{
+    wallTx.loadFromFile("images/wall.png");
+    redGhostTx.loadFromFile("images/redGhost.png");
+    blueGhostTx.loadFromFile("images/blueGhost.png");
+    pinkGhostTx.loadFromFile("images/pinkGhost.png");
+    orangeGhostTx.loadFromFile("images/orangeGhost.png");
+    playerUpTx.loadFromFile("images/pacmanUp.png");
+    playerDownTx.loadFromFile("images/pacmanDown.png");
+    playerLeftTx.loadFromFile("images/pacmanLeft.png");
+    playerRightTx.loadFromFile("images/pacmanRight.png");
     loadMap();
 }
 
+// マップをロードします
 void Game::loadMap() {
     walls.clear();
     foods.clear();
     ghosts.clear();
-    float size = tileSize * 0.8f;
+    Map map;
+    float scaleWidth = width / (tileSize * colCount / 2.0f);
+    float scaleHeight = height / (tileSize * rowCount / 2.0f);
+    float size = tileSize * 1.0f;
     float offset = (tileSize - size) / 3;
 
     for (int r=0; r<rowCount; r++) {
         for (int c=0; c<colCount; c++) {
-            Map map;
             char tile = map.data[r][c];
-            float y = r * tileSize;
             float x = c * tileSize;
+            float y = r * tileSize;
 
-            if (tile == 'X') {
-                Block wall(x+offset, y+offset, size, size, wallTexture);
-                wall.sprite.setPosition(x, y);
-                walls.push_back(wall);
-            } else if (tile == 'P') {
-                pacman = Player(x, y, tileSize, tileSize, pacmanRight);
-                pacman.sprite.setTexture(pacmanRight);
-                pacman.sprite.setPosition(x, y);
-            } else if (tile == ' ') {
-                Block food(x+7, y+7, 4, 4);
-                foods.push_back(food);
-            } else if (tile == 'r' || tile == 'b' || tile == 'p' || tile == 'o') {
-                sf::Texture* texture;
-                switch (tile) {
-                    case 'r': texture = &redGhost; break;
-                    case 'b': texture = &blueGhost; break;
-                    case 'p': texture = &pinkGhost; break;
-                    case 'o': texture = &orangeGhost; break;
-                    default: break;
-                }
-                Ghost ghost = Ghost(x+offset, y+offset, size, size, *texture);
-                ghost.sprite.setPosition(ghost.x, ghost.y);
-                ghost.ai(tileSize);
-                ghosts.push_back(ghost);
-
+            switch (tile) {
+                case 'X': makeWall(x+offset, y+offset, size, size); break;
+                case ' ': makeFood(x+offset, y+offset); break;
+                case 'r': makeGhost(x+offset, y+offset, size, size, redGhostTx); break;
+                case 'b': makeGhost(x+offset, y+offset, size, size, blueGhostTx); break;
+                case 'p': makeGhost(x+offset, y+offset, size, size, pinkGhostTx); break;
+                case 'o': makeGhost(x+offset, y+offset, size, size, orangeGhostTx); break;
+                case 'P': player = Player(x+offset, y+offset, size, size, playerRightTx); break;
             }
         }
     }
 }
 
+// 更新
 void Game::update() {
-    pacman.x += pacman.velocityX;
-    pacman.y += pacman.velocityY;
+    player.x += player.velocityX;
+    player.y += player.velocityY;
 
     for (auto& wall : walls) {
-        if (pacman.collision(wall)) {
-            pacman.x -= pacman.velocityX;
-            pacman.y -= pacman.velocityY;
+        if (player.collision(wall)) {
+            player.x -= player.velocityX;
+            player.y -= player.velocityY;
             break;
         }
     }
+
     for (int i=0; i<foods.size(); i++) {
-        if (pacman.collision(foods[i])) {
-            hud.score += 10;
+        if (player.collision(foods[i])) {
+            score += 10;
             foods.erase(foods.begin() + i);
             break;
         }
     }
+
     for (auto& ghost : ghosts) {
         ghost.x += ghost.velocityX;
         ghost.y += ghost.velocityY;
@@ -88,69 +76,64 @@ void Game::update() {
             if (ghost.collision(wall)) {
                 ghost.x -= ghost.velocityX;
                 ghost.y -= ghost.velocityY;
-                ghost.velocityX = 0;
-                ghost.velocityY = 0;
-
-                int r = rand() % 4;
-                char dirs[4] = {'U', 'D', 'L', 'R'};
-                char dir = dirs[r];
-
-                float speed = tileSize / 4;
-                if (dir == 'U') ghost.velocityY = -speed;
-                if (dir == 'D') ghost.velocityY = speed;
-                if (dir == 'L') ghost.velocityX = -speed;
-                if (dir == 'R') ghost.velocityX = speed;
+                ghost.resetVelocity();
+                ghost.ai(tileSize);
             }
         }
 
-        if (pacman.collision(ghost)) {
-            pacman.sprite.setPosition(pacman.x, pacman.y);
-
-            // lives--;
-            hud.lives--;
-            if (hud.lives <= 0) {
+        if (player.collision(ghost) && !gameOver) {
+            life--;
+            if (life <= 0) {
                 gameOver = true;
+                player.resetVelocity();
                 return;
             }
-            pacman.reset();
+            player.resetPosition();
+            player.resetVelocity();
             return;
         }
 
         ghost.sprite.setPosition(ghost.x, ghost.y);
-
-        // ワープ
-        // if (pacman.x < 0) {
-        //     pacman.x = width - tileSize;
-        // } else if (pacman.x + tileSize > width) {
-        //     pacman.x = 0;
-        // }
     }
 
-    pacman.sprite.setPosition(pacman.x, pacman.y);
-
+    player.sprite.setPosition(player.x, player.y);
 }
 
+// 画面にテクスチャを描画します
 void Game::draw(sf::RenderWindow& window) {
-    for (auto& wall : walls) {
-        window.draw(wall.sprite);
-    }
-    for (auto& food : foods) {
-        sf::RectangleShape rect;
-        rect.setSize(sf::Vector2f(food.width, food.height));
-        rect.setFillColor(sf::Color::White);
-        rect.setPosition(food.x, food.y);
-        window.draw(rect);
-    }
-    for (auto& ghost : ghosts) {
-        window.draw(ghost.sprite);
-    }
-    window.draw(pacman.sprite);
+    for (auto& wall : walls)   { window.draw(wall.sprite); }
+    for (auto& food : foods)   { window.draw(Food::foodRect(food)); }
+    for (auto& ghost : ghosts) { window.draw(ghost.sprite); }
+    window.draw(player.sprite);
+
+    hud.drawLife(window, playerRightTx, life);
+    hud.drawScore(window, score);
+    hud.drawGameOver(window, gameOver);
 }
 
+// プレイヤーからの入力でテクスチャを変化させます
 void Game::handleInput(char dir) {
-    pacman.setDirection(dir, tileSize / 4);
-    if (dir == 'U') pacman.sprite.setTexture(pacmanUp);
-    if (dir == 'D') pacman.sprite.setTexture(pacmanDown);
-    if (dir == 'L') pacman.sprite.setTexture(pacmanLeft);
-    if (dir == 'R') pacman.sprite.setTexture(pacmanRight);
+    player.setDirection(dir, tileSize / 4);
+    switch (dir) {
+        case 'U': player.sprite.setTexture(playerUpTx);    break;
+        case 'D': player.sprite.setTexture(playerDownTx);  break;
+        case 'L': player.sprite.setTexture(playerLeftTx);  break;
+        case 'R': player.sprite.setTexture(playerRightTx); break;
+    }
+}
+
+void Game::makeWall(float x, float y, float scaleWidth, float scaleHeight) {
+    Block wall(x, y, scaleWidth, scaleHeight, wallTx);
+    walls.push_back(wall);
+}
+
+void Game::makeFood(float x, float y) {
+    Food food(x+tileSize/2-2, y+tileSize/2-2, 4, 4);
+    foods.push_back(food);
+}
+
+void Game::makeGhost(float x, float y, float scaleWidth, float scaleHeight, sf::Texture& tx) {
+    Ghost ghost(x, y, scaleWidth, scaleHeight, tx);
+    ghost.ai(tileSize);
+    ghosts.push_back(ghost);
 }

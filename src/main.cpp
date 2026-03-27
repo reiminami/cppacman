@@ -1,51 +1,31 @@
-#include <SFML/Graphics.hpp>
 #include "Game.hpp"
-#include "HUD.hpp"
+#include "Event.hpp"
 
 int main() {
     Game game;
-    bool gameOver;
-    int width  = game.colCount * game.tileSize;
-    int height = game.rowCount * game.tileSize;
-    sf::RenderWindow window(sf::VideoMode(width, height), "PacMan");    // ウィンドウ生成
-    window.setFramerateLimit(20);   // fps
+    sf::VideoMode videoMode(game.width, game.height);
+    sf::RenderWindow window(videoMode, game.appName);
+    window.setFramerateLimit(30);
 
     while (window.isOpen()) {
-        sf::Event event;
+        Event event;
 
+        // イベント設定
         while (window.pollEvent(event)) {
-            // ウィンドウクローズイベント
-            if (event.type == sf::Event::Closed) window.close();
-
-            // キー押下イベント
-            if (event.type == sf::Event::KeyPressed) {
-                switch (event.key.code) {
-                    case sf::Keyboard::Up:    game.handleInput('U'); break;
-                    case sf::Keyboard::Down:  game.handleInput('D'); break;
-                    case sf::Keyboard::Left:  game.handleInput('L'); break;
-                    case sf::Keyboard::Right: game.handleInput('R'); break;
-                    default: break;
-                }
-                if (game.gameOver) {
-                    game.loadMap();
-                    // game.lives = 3;
-                    game.hud.reset();
-                    game.gameOver = false;
-                }
-            }
+            event.setClosed(window);
+            event.setKeyPressed(game);
         }
 
         // 更新
-        if (!game.gameOver) game.update();
+        game.update();
 
         // 描画
         window.clear();
         game.draw(window);
-        game.hud.draw(window, gameOver);
+
+        // 反映
         window.display();
     }
 
     return 0;
 }
-
-
